@@ -1,0 +1,5 @@
+.idea/*
+*.log
+metastore_db/*
+project/target/*
+target/*
