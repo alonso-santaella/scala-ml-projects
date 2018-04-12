@@ -2,6 +2,7 @@ package com.alonsosantaella.scalaml.ch1
 
 import org.apache.spark._
 import org.apache.spark.SparkContext._
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql._
 import org.apache.log4j._
 
@@ -14,6 +15,7 @@ object AnalyzingInsuranceClaims {
 
     // Defining parameters to be used down the road
     // Path where training and testing data are:
+    //val dataPath: String = "hdfs://master:9000/test/data/ch1/"
     val dataPath: String = "data/ch1/"
     val train: String = dataPath + "train.csv"
     val test: String = dataPath + "test.csv"
@@ -27,6 +29,7 @@ object AnalyzingInsuranceClaims {
       .builder
       .appName("AnalyzingInsuranceClaims")
       .master("local[*]")
+      //.master("yarn")
       .getOrCreate()
 
     /*
@@ -57,10 +60,10 @@ object AnalyzingInsuranceClaims {
       .cache
 
     // Schema of the training data frame:
-    //println(trainData.printSchema())
+    println(trainData.printSchema())
 
     // Dimensions of the data frame:
-    //println(trainData.count(), trainData.columns.length)
+    println(trainData.count(), trainData.columns.length)
 
     println("Cleaning and parsing data:")
 
