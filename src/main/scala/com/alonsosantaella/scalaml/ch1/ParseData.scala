@@ -32,7 +32,7 @@ object ParseData {
 
   println(s"Reading data from $train file...")
 
-  val trainData: DataFrame = spark.read
+  val trainInput: DataFrame = spark.read
     .option("header","true")
     .option("inferSchema","true")
     .format("csv")
@@ -41,7 +41,7 @@ object ParseData {
 
   println(s"Reading data from $test file...")
 
-  val testData: DataFrame = spark.read
+  val testInput: DataFrame = spark.read
     .option("header","true")
     .option("inferSchema","true")
     .format("csv")
@@ -49,43 +49,41 @@ object ParseData {
     .cache
 
   // Schema of the training data frame:
-  //println(trainData.printSchema())
+  //println(trainInput.printSchema())
 
   // Dimensions of the data frame:
-  //println(trainData.count(), trainData.columns.length)
+  //println(trainInput.count(), trainInput.columns.length)
 
   /*
   The "loss" column name is changed to "label", as the linear regression
   methods look for a column named as such. The data is then sampled
   without replacement, and is checked for NA rows with the user-defined
-  -method "removeNA" defined in the implicit class "ParseMethods".
+  method "removeNA"; see class ParseMethods.
   */
 
-  println("Cleaning and parsing data:")
+  println(s"Cleaning and parsing ${train}:")
   println("Changing \"loss\" column to \"label\"...")
-  //println(s"Sampling data with sample factor: $testSample...")
-  println("Checking data for null rows...")
+  println("Checking data for rows with null values...")
 
-  val data: DataFrame =
-    trainData
-      .withColumnRenamed("loss", "label")
-      .sample(withReplacement = false, trainSample)
-      .removeNA() // This is a user-defined-method; see: "ParseMethods"
+  val data: DataFrame = trainInput
+    .withColumnRenamed("loss", "label")
+    .sample(withReplacement = false, trainSample)
+    .removeNA()
 
   /*
   The training data in "data" is now partitioned at random (with "seed")
-  into a training (75%) and a validation (25%) data set; again, see
-  splitTrVa method in ParseMethod class.
+  into a training (75%) and a validation (25%) data set and cached. A user-defined method
+  called splitTrVa is used; see object ParseMethods.
    */
 
+  println(s"Splitting ${train} into training and validation sets...")
   val (trainingData, validationData) = data.splitTrVa()
-
-  // Caching the resulting data frames:
   trainingData.cache()
   validationData.cache()
 
-  // Loading testingData:
-  val testingData = testData
+  // Loading and caching testingData:
+  println(s"Loading ${test} into memory...")
+  val testingData: DataFrame = testInput
     .sample(withReplacement = false, testSample)
     .cache()
 
@@ -97,7 +95,7 @@ object ParseData {
   def isCateg(c: String): Boolean = c.startsWith("cat")
   def categNewCol(c: String): String = if (isCateg(c)) s"idx_${c}" else c
 
-
+  
   implicit class ParseMethods(df: DataFrame) {
     /*
     This method removes NAs from the data set and then compares it
@@ -108,7 +106,7 @@ object ParseData {
     def removeNA(): DataFrame = {
       val DF: DataFrame = df.na.drop()
       // Checking for nulls or NAs:
-      if (df == DF) {
+      if (df.count() == DF.count()) {
         println("No null rows in the data.")
         df
       }
@@ -122,9 +120,9 @@ object ParseData {
     dataframes. The seed and ratio of data to be used as training
     are coded as default values but can be modified if need be.
     */
-    def splitTrVa(seed: Long = 12345, train: Double = 0.75) = {
+    def splitTrVa(seed: Long = 12345, train: Double = 0.75): (DataFrame, DataFrame) = {
       val valid: Double = 1-train
-      val splits = df.randomSplit(Array(train, valid, seed))
+      val splits = df.randomSplit(Array(train, valid), seed)
       val (training, validation) = (splits(0), splits(1))
       (training,validation)
     }
