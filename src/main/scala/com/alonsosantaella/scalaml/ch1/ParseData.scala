@@ -91,11 +91,23 @@ object ParseData {
   Defining function to know which columns are categorical and which
   are continuous. Second function renames categorical variables.
   */
+  def filterCatData(df: DataFrame, maxLevel: Int = 30): DataFrame = {
 
-  def isCateg(c: String): Boolean = c.startsWith("cat")
-  def categNewCol(c: String): String = if (isCateg(c)) s"idx_${c}" else c
+    def isCateg(c: String): Boolean = c.startsWith("cat")
 
-  
+    def hasTooManyCats(c: String): Boolean = {
+      df.select(c).distinct().count() <= maxLevel
+    }
+
+    def categNewCol(c: String): String = if (isCateg(c)) s"idx_${c}" else c
+
+    val filteredCatCols = trainingData.columns
+      .filter(isCateg)
+      .filter(trainingData.select(_).distinct().count() <= 30)
+      //.filter(!(_ matches "id|label"))
+  }
+  //colsTooManyCategories.foreach(println)
+
   /*
   This function removes NAs from the data set and then compares it
   to the original data set; if the data contains no NA rows it returns
