@@ -58,7 +58,7 @@ object ParseData {
   The "loss" column name is changed to "label", as the linear regression
   methods look for a column named as such. The data is then sampled
   without replacement, and is checked for NA rows with the user-defined
-  method "removeNA"; see class ParseMethods.
+  function "removeNA".
   */
 
   println(s"Cleaning and parsing ${train}:")
@@ -68,16 +68,16 @@ object ParseData {
   val data: DataFrame = trainInput
     .withColumnRenamed("loss", "label")
     .sample(withReplacement = false, trainSample)
-    .removeNA()
+    .transform(removeNA)
 
   /*
   The training data in "data" is now partitioned at random (with "seed")
-  into a training (75%) and a validation (25%) data set and cached. A user-defined method
-  called splitTrVa is used; see object ParseMethods.
+  into a training (75%) and a validation (25%) data set and cached. A
+  user-defined function called splitTrVa is used.
    */
 
   println(s"Splitting ${train} into training and validation sets...")
-  val (trainingData, validationData) = data.splitTrVa()
+  val (trainingData, validationData) = splitTrVa(data)
   trainingData.cache()
   validationData.cache()
 
@@ -96,36 +96,36 @@ object ParseData {
   def categNewCol(c: String): String = if (isCateg(c)) s"idx_${c}" else c
 
   
-  implicit class ParseMethods(df: DataFrame) {
-    /*
-    This method removes NAs from the data set and then compares it
-    to the original data set; if the data contains no NA rows it returns
-    the original data set, if the data contains null rows it returns the
-    data set with those rows removed.
-     */
-    def removeNA(): DataFrame = {
-      val DF: DataFrame = df.na.drop()
-      // Checking for nulls or NAs:
-      if (df.count() == DF.count()) {
-        println("No null rows in the data.")
-        df
-      }
-      else {
-        println("The data contains null rows. Dropping them...")
-        DF
-      }
+  /*
+  This function removes NAs from the data set and then compares it
+  to the original data set; if the data contains no NA rows it returns
+  the original data set, if the data contains null rows it returns the
+  data set with those rows removed.
+   */
+  def removeNA(df: DataFrame): DataFrame = {
+    val DF: DataFrame = df.na.drop()
+    // Checking for nulls or NAs:
+    if (df.count() == DF.count()) {
+      println("No null rows in the data.")
+      df
     }
-    /*
-    This method return a tuple with the training and validation
-    dataframes. The seed and ratio of data to be used as training
-    are coded as default values but can be modified if need be.
-    */
-    def splitTrVa(seed: Long = 12345, train: Double = 0.75): (DataFrame, DataFrame) = {
-      val valid: Double = 1-train
-      val splits = df.randomSplit(Array(train, valid), seed)
-      val (training, validation) = (splits(0), splits(1))
-      (training,validation)
+    else {
+      println("The data contains null rows. Dropping them...")
+      DF
     }
+  }
+  /*
+  This function return a tuple with the training and validation
+  dataframes. The seed and ratio of data to be used as training
+  are coded as default values but can be modified if need be.
+  */
+  def splitTrVa(df: DataFrame): (DataFrame, DataFrame) = {
+    val seed: Long = 12345
+    val train: Double = 0.75
+    val valid: Double = 1-train
+    val splits: Array[DataFrame] = df.randomSplit(Array(train, valid), seed)
+    val (training: DataFrame, validation: DataFrame) = (splits(0), splits(1))
+    (training, validation)
   }
 
 }
